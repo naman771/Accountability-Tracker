@@ -20,20 +20,25 @@ function getWeekStart(dateStr) {
 
 // Create weekly goal + auto-generate daily progress entries
 router.post('/', requireAuth, (req, res) => {
-  const { title, description, weeklyTarget, unit, weekStart } = req.body;
+  const { title, description, weeklyTarget, unit, weekStart, goalType } = req.body;
   const userId = req.session.userId;
+  const type = goalType === 'daily' ? 'daily' : 'weekly';
 
   if (!title || !weeklyTarget || !weekStart) {
-    return res.status(400).json({ error: 'Title, weeklyTarget, and weekStart are required' });
+    return res.status(400).json({ error: 'Title, target, and weekStart are required' });
   }
 
   const monday = getWeekStart(weekStart);
-  const dailyTarget = Math.round((weeklyTarget / 7) * 100) / 100;
+  // For daily goals, the entered target IS the daily target
+  // For weekly goals, divide by 7
+  const dailyTarget = type === 'daily'
+    ? Math.round(weeklyTarget * 100) / 100
+    : Math.round((weeklyTarget / 7) * 100) / 100;
 
   try {
     const result = db.prepare(
-      'INSERT INTO weekly_goals (user_id, week_start, title, description, weekly_target, unit) VALUES (?, ?, ?, ?, ?, ?)'
-    ).run(userId, monday, title, description || '', weeklyTarget, unit || 'tasks');
+      'INSERT INTO weekly_goals (user_id, week_start, title, description, weekly_target, unit, goal_type) VALUES (?, ?, ?, ?, ?, ?, ?)'
+    ).run(userId, monday, title, description || '', weeklyTarget, unit || 'tasks', type);
 
     const goalId = result.lastInsertRowid;
 
@@ -52,7 +57,7 @@ router.post('/', requireAuth, (req, res) => {
     });
     createDailyEntries();
 
-    res.json({ id: goalId, title, weeklyTarget, dailyTarget, weekStart: monday });
+    res.json({ id: goalId, title, weeklyTarget, dailyTarget, weekStart: monday, goalType: type });
   } catch (err) {
     if (err.message.includes('UNIQUE constraint')) {
       return res.status(409).json({ error: 'A goal with this title already exists for this week' });

@@ -30,6 +30,7 @@ db.exec(`
     description TEXT,
     weekly_target REAL NOT NULL,
     unit TEXT DEFAULT 'tasks',
+    goal_type TEXT DEFAULT 'weekly',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id),
     UNIQUE(user_id, week_start, title)
@@ -50,6 +51,13 @@ db.exec(`
     UNIQUE(user_id, goal_id, date)
   );
 `);
+
+// Migration: add goal_type column if missing (for existing databases)
+try {
+  db.exec(`ALTER TABLE weekly_goals ADD COLUMN goal_type TEXT DEFAULT 'weekly'`);
+} catch (e) {
+  // Column already exists — safe to ignore
+}
 
 // Ensure default users exist (upsert-style so redeploys don't skip new users)
 const defaultUsers = [

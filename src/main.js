@@ -126,15 +126,33 @@ function bindEvents() {
   // Goal form
   document.getElementById('goal-form').addEventListener('submit', handleCreateGoal);
 
+  // Goal type toggle
+  document.querySelectorAll('.type-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const type = btn.dataset.type;
+      document.getElementById('goal-type').value = type;
+      document.getElementById('target-label').textContent = type === 'daily' ? 'Daily Target' : 'Weekly Target';
+      // Re-trigger preview
+      document.getElementById('goal-target').dispatchEvent(new Event('input'));
+    });
+  });
+
   // Daily target preview
   document.getElementById('goal-target').addEventListener('input', (e) => {
     const val = parseFloat(e.target.value);
     const preview = document.getElementById('daily-preview');
     const previewVal = document.getElementById('daily-target-preview');
+    const goalType = document.getElementById('goal-type').value;
     if (val > 0) {
-      const daily = Math.round((val / 7) * 100) / 100;
       const unit = document.getElementById('goal-unit').value || 'tasks';
-      previewVal.textContent = `${daily} ${unit}/day`;
+      if (goalType === 'daily') {
+        previewVal.textContent = `${val} ${unit}/day × 7 days`;
+      } else {
+        const daily = Math.round((val / 7) * 100) / 100;
+        previewVal.textContent = `${daily} ${unit}/day`;
+      }
       preview.style.display = 'flex';
     } else {
       preview.style.display = 'none';
@@ -222,7 +240,8 @@ async function loadWeekGoals() {
 }
 
 function renderGoalCard(goal) {
-  const dailyTarget = Math.round((goal.weekly_target / 7) * 100) / 100;
+  const isDaily = goal.goal_type === 'daily';
+  const dailyTarget = isDaily ? goal.weekly_target : Math.round((goal.weekly_target / 7) * 100) / 100;
   const progress = goal.dailyProgress || [];
 
   const dayCells = DAY_NAMES.map((name, i) => {
@@ -246,7 +265,7 @@ function renderGoalCard(goal) {
           ${goal.description ? `<div class="goal-meta">${escapeHtml(goal.description)}</div>` : ''}
         </div>
         <div style="display:flex;align-items:center;gap:0.5rem;">
-          <span class="goal-target-badge">${goal.weekly_target} ${goal.unit}/week</span>
+          <span class="goal-target-badge">${isDaily ? goal.weekly_target + ' ' + goal.unit + '/day' : goal.weekly_target + ' ' + goal.unit + '/week'}</span>
           <button class="btn-delete" data-goal-id="${goal.id}">✕</button>
         </div>
       </div>
@@ -372,7 +391,8 @@ function renderTeamMember(member) {
   const ringColor = getColorClass(member.avgCompletion);
 
   const goalCards = member.goals.map(goal => {
-    const dailyTarget = Math.round((goal.weekly_target / 7) * 100) / 100;
+    const isDaily = goal.goal_type === 'daily';
+    const dailyTarget = isDaily ? goal.weekly_target : Math.round((goal.weekly_target / 7) * 100) / 100;
     const progress = goal.dailyProgress || [];
     const dayCells = DAY_NAMES.map((name, i) => {
       const entry = progress[i];
@@ -390,7 +410,7 @@ function renderTeamMember(member) {
       <div class="team-goal">
         <div class="team-goal-header">
           <span class="team-goal-title">${escapeHtml(goal.title)}</span>
-          <span class="team-goal-badge">${goal.weekly_target} ${goal.unit}/wk</span>
+          <span class="team-goal-badge">${isDaily ? goal.weekly_target + ' ' + goal.unit + '/day' : goal.weekly_target + ' ' + goal.unit + '/wk'}</span>
         </div>
         <div class="team-daily-breakdown">${dayCells}</div>
       </div>`;
@@ -498,16 +518,22 @@ async function handleCreateGoal(e) {
   const description = document.getElementById('goal-desc').value.trim();
   const weeklyTarget = parseFloat(document.getElementById('goal-target').value);
   const unit = document.getElementById('goal-unit').value.trim() || 'tasks';
+  const goalType = document.getElementById('goal-type').value;
 
   try {
     await api('/goals', {
       method: 'POST',
-      body: { title, description, weeklyTarget, unit, weekStart: currentWeekStart },
+      body: { title, description, weeklyTarget, unit, weekStart: currentWeekStart, goalType },
     });
 
     document.getElementById('goal-modal').style.display = 'none';
     document.getElementById('goal-form').reset();
     document.getElementById('daily-preview').style.display = 'none';
+    // Reset type toggle to weekly
+    document.getElementById('goal-type').value = 'weekly';
+    document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector('.type-btn[data-type="weekly"]').classList.add('active');
+    document.getElementById('target-label').textContent = 'Weekly Target';
     loadWeekGoals();
     loadTeamProgress();
     loadCalendar();
