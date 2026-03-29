@@ -71,4 +71,50 @@ router.get('/month', requireAuth, (req, res) => {
   res.json(Object.values(byDate));
 });
 
+// Get all team members' progress for a week (cross-user view)
+router.get('/team', requireAuth, (req, res) => {
+  const { weekStart } = req.query;
+  if (!weekStart) {
+    return res.status(400).json({ error: 'weekStart query param required' });
+  }
+
+  // Get all users
+  const users = db.prepare('SELECT id, username, display_name FROM users').all();
+
+  const teamData = users.map(user => {
+    const goals = db.prepare(
+      'SELECT * FROM weekly_goals WHERE user_id = ? AND week_start = ?'
+    ).all(user.id, weekStart);
+
+    const goalsWithProgress = goals.map(goal => {
+      const progress = db.prepare(
+        'SELECT * FROM daily_progress WHERE goal_id = ? ORDER BY date'
+      ).all(goal.id);
+      return { ...goal, dailyProgress: progress };
+    });
+
+    // Calculate overall weekly completion
+    let totalPct = 0;
+    let totalEntries = 0;
+    for (const goal of goalsWithProgress) {
+      for (const p of goal.dailyProgress) {
+        totalPct += p.completion_percent || 0;
+        totalEntries++;
+      }
+    }
+    const avgCompletion = totalEntries > 0 ? Math.round(totalPct / totalEntries) : 0;
+
+    return {
+      id: user.id,
+      username: user.username,
+      displayName: user.display_name,
+      goals: goalsWithProgress,
+      avgCompletion,
+      goalCount: goals.length,
+    };
+  });
+
+  res.json(teamData);
+});
+
 export default router;

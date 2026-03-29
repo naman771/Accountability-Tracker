@@ -76,6 +76,7 @@ function showDashboard() {
   document.getElementById('dashboard-view').style.display = 'block';
   document.getElementById('user-greeting').textContent = `Hey, ${currentUser.displayName} 👋`;
   loadWeekGoals();
+  loadTeamProgress();
   loadCalendar();
 }
 
@@ -91,10 +92,12 @@ function bindEvents() {
   document.getElementById('prev-week').addEventListener('click', () => {
     currentWeekStart = addDays(currentWeekStart, -7);
     loadWeekGoals();
+    loadTeamProgress();
   });
   document.getElementById('next-week').addEventListener('click', () => {
     currentWeekStart = addDays(currentWeekStart, 7);
     loadWeekGoals();
+    loadTeamProgress();
   });
 
   // Month nav
@@ -328,10 +331,87 @@ function openProgressModal(date, goals) {
     }
     modal.style.display = 'none';
     loadWeekGoals();
+    loadTeamProgress();
     loadCalendar();
   });
 
   modal.style.display = 'flex';
+}
+
+// ===== Team Progress =====
+async function loadTeamProgress() {
+  const container = document.getElementById('team-progress');
+  container.innerHTML = '<div class="empty-state"><div class="spinner"></div></div>';
+
+  try {
+    const team = await api(`/progress/team?weekStart=${currentWeekStart}`);
+    if (team.length === 0) {
+      container.innerHTML = '<div class="empty-state">No team data available.</div>';
+      return;
+    }
+
+    container.innerHTML = team.map(member => renderTeamMember(member)).join('');
+
+    // Bind expand toggles
+    container.querySelectorAll('.team-member-header').forEach(header => {
+      header.addEventListener('click', () => {
+        const card = header.closest('.team-member-card');
+        card.classList.toggle('expanded');
+      });
+    });
+  } catch (err) {
+    container.innerHTML = `<div class="empty-state" style="color:var(--red)">Failed to load team data: ${err.message}</div>`;
+  }
+}
+
+function renderTeamMember(member) {
+  const isCurrentUser = member.id === currentUser.id;
+  const avatarColors = ['#6c5ce7', '#00b894', '#e17055'];
+  const colorIdx = member.id % avatarColors.length;
+  const initial = member.displayName.charAt(0).toUpperCase();
+  const ringColor = getColorClass(member.avgCompletion);
+
+  const goalCards = member.goals.map(goal => {
+    const dailyTarget = Math.round((goal.weekly_target / 7) * 100) / 100;
+    const progress = goal.dailyProgress || [];
+    const dayCells = DAY_NAMES.map((name, i) => {
+      const entry = progress[i];
+      if (!entry) return `<div class="team-day-cell"><span class="day-name">${name}</span><span class="day-percent">—</span></div>`;
+      const pct = entry.completion_percent || 0;
+      const color = pct > 0 ? getColorClass(pct) : '';
+      return `
+        <div class="team-day-cell ${color}">
+          <span class="day-name">${name}</span>
+          <span class="day-percent">${pct}%</span>
+        </div>`;
+    }).join('');
+
+    return `
+      <div class="team-goal">
+        <div class="team-goal-header">
+          <span class="team-goal-title">${escapeHtml(goal.title)}</span>
+          <span class="team-goal-badge">${goal.weekly_target} ${goal.unit}/wk</span>
+        </div>
+        <div class="team-daily-breakdown">${dayCells}</div>
+      </div>`;
+  }).join('');
+
+  return `
+    <div class="team-member-card ${isCurrentUser ? 'is-you' : ''}">
+      <div class="team-member-header">
+        <div class="team-member-info">
+          <div class="team-avatar" style="background:${avatarColors[colorIdx]}">${initial}</div>
+          <div>
+            <span class="team-member-name">${escapeHtml(member.displayName)}${isCurrentUser ? ' <span class="you-badge">You</span>' : ''}</span>
+            <span class="team-member-stats">${member.goalCount} goal${member.goalCount !== 1 ? 's' : ''} this week</span>
+          </div>
+        </div>
+        <div class="team-completion-ring ${ringColor}">
+          <span class="team-completion-value">${member.avgCompletion}%</span>
+        </div>
+      </div>
+      <div class="team-member-goals">${goalCards || '<div class="empty-state" style="padding:0.75rem;font-size:0.85rem;">No goals set this week</div>'}</div>
+    </div>`;
 }
 
 // ===== Calendar =====
@@ -429,6 +509,7 @@ async function handleCreateGoal(e) {
     document.getElementById('goal-form').reset();
     document.getElementById('daily-preview').style.display = 'none';
     loadWeekGoals();
+    loadTeamProgress();
     loadCalendar();
   } catch (err) {
     alert(err.message);

@@ -59,9 +59,9 @@ if (existingUsers.count === 0) {
   );
 
   const defaultUsers = [
-    { username: 'user1', password: 'pass1', name: 'User 1' },
-    { username: 'user2', password: 'pass2', name: 'User 2' },
-    { username: 'user3', password: 'pass3', name: 'User 3' },
+    { username: 'naman', password: 'naman', name: 'Naman' },
+    { username: 'dhruv', password: 'dhruv', name: 'Dhruv' },
+    { username: 'shubh', password: 'shubh', name: 'Shubh' },
   ];
 
   const seedUsers = db.transaction(() => {
