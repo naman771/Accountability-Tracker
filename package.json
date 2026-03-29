@@ -1,0 +1,24 @@
+{
+  "name": "placement-tracker",
+  "version": "1.0.0",
+  "description": "Campus Placement Accountability Tracker",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "node --watch server.js",
+    "dev:client": "vite",
+    "build": "vite build",
+    "start": "NODE_ENV=production node server.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.0.0",
+    "cors": "^2.8.5",
+    "express": "^4.21.0",
+    "express-session": "^1.18.0",
+    "bcryptjs": "^2.4.3"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0",
+    "vite": "^6.0.0"
+  }
+}

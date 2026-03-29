@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PlacePrep — Campus Placement Tracker</title>
+  <meta name="description" content="Track your campus placement preparation progress with weekly goals, daily objectives, and color-coded calendar insights." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- Login View -->
+    <div id="login-view" class="view">
+      <div class="login-container">
+        <div class="login-glow"></div>
+        <div class="login-card">
+          <div class="login-header">
+            <div class="logo">
+              <span class="logo-icon">🎯</span>
+              <h1>PlacePrep</h1>
+            </div>
+            <p class="login-subtitle">Campus Placement Accountability Tracker</p>
+          </div>
+          <form id="login-form">
+            <div class="input-group">
+              <label for="username">Username</label>
+              <input type="text" id="username" name="username" placeholder="Enter your username" required autocomplete="username" />
+            </div>
+            <div class="input-group">
+              <label for="password">Password</label>
+              <input type="password" id="password" name="password" placeholder="Enter your password" required autocomplete="current-password" />
+            </div>
+            <button type="submit" id="login-btn" class="btn-primary">
+              <span>Sign In</span>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </button>
+            <div id="login-error" class="error-msg" style="display:none;"></div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dashboard View -->
+    <div id="dashboard-view" class="view" style="display:none;">
+      <header class="topbar">
+        <div class="topbar-left">
+          <span class="logo-icon-sm">🎯</span>
+          <span class="topbar-title">PlacePrep</span>
+        </div>
+        <div class="topbar-right">
+          <span id="user-greeting" class="greeting"></span>
+          <button id="logout-btn" class="btn-ghost">Logout</button>
+        </div>
+      </header>
+
+      <main class="dashboard">
+        <!-- Week Summary -->
+        <section class="section" id="week-summary-section">
+          <div class="section-header">
+            <h2>📅 This Week's Goals</h2>
+            <button id="add-goal-btn" class="btn-accent">+ New Goal</button>
+          </div>
+          <div id="week-nav" class="week-nav">
+            <button id="prev-week" class="btn-icon">◀</button>
+            <span id="week-label" class="week-label"></span>
+            <button id="next-week" class="btn-icon">▶</button>
+          </div>
+          <div id="goals-list" class="goals-list"></div>
+        </section>
+
+        <!-- Calendar Section -->
+        <section class="section" id="calendar-section">
+          <div class="section-header">
+            <h2>📊 Monthly Progress</h2>
+          </div>
+          <div class="calendar-nav">
+            <button id="prev-month" class="btn-icon">◀</button>
+            <span id="month-label" class="month-label"></span>
+            <button id="next-month" class="btn-icon">▶</button>
+          </div>
+          <div class="calendar-legend">
+            <span class="legend-item"><span class="dot dot-green"></span> ≥75%</span>
+            <span class="legend-item"><span class="dot dot-yellow"></span> 40–74%</span>
+            <span class="legend-item"><span class="dot dot-red"></span> &lt;40%</span>
+            <span class="legend-item"><span class="dot dot-gray"></span> No data</span>
+          </div>
+          <div id="calendar-grid" class="calendar-grid"></div>
+        </section>
+      </main>
+
+      <!-- Goal Modal -->
+      <div id="goal-modal" class="modal" style="display:none;">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>Create Weekly Goal</h3>
+            <button id="close-goal-modal" class="btn-icon close-btn">✕</button>
+          </div>
+          <form id="goal-form">
+            <div class="input-group">
+              <label for="goal-title">Goal Title</label>
+              <input type="text" id="goal-title" placeholder="e.g., Solve LeetCode Problems" required />
+            </div>
+            <div class="input-group">
+              <label for="goal-desc">Description (optional)</label>
+              <textarea id="goal-desc" placeholder="Brief description..." rows="2"></textarea>
+            </div>
+            <div class="input-row">
+              <div class="input-group">
+                <label for="goal-target">Weekly Target</label>
+                <input type="number" id="goal-target" placeholder="e.g., 21" min="1" required />
+              </div>
+              <div class="input-group">
+                <label for="goal-unit">Unit</label>
+                <input type="text" id="goal-unit" placeholder="e.g., problems" value="tasks" />
+              </div>
+            </div>
+            <div class="daily-preview" id="daily-preview" style="display:none;">
+              <span class="preview-label">Daily target:</span>
+              <span id="daily-target-preview" class="preview-value"></span>
+            </div>
+            <button type="submit" class="btn-primary">Create Goal</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Progress Modal -->
+      <div id="progress-modal" class="modal" style="display:none;">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3 id="progress-modal-title">Update Progress</h3>
+            <button id="close-progress-modal" class="btn-icon close-btn">✕</button>
+          </div>
+          <div id="progress-entries"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
