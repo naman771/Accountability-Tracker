@@ -27,11 +27,14 @@ function getMonday(d) {
 }
 
 function toDateStr(d) {
-  return d.toISOString().split('T')[0];
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 function addDays(dateStr, n) {
-  const d = new Date(dateStr);
+  const d = new Date(dateStr + 'T00:00:00');
   d.setDate(d.getDate() + n);
   return toDateStr(d);
 }
@@ -230,6 +233,7 @@ async function loadWeekGoals() {
         if (confirm('Delete this goal and all its progress?')) {
           await api(`/goals/${goalId}`, { method: 'DELETE' });
           loadWeekGoals();
+          loadTeamProgress();
           loadCalendar();
         }
       });

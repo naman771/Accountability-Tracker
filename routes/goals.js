@@ -10,12 +10,19 @@ function requireAuth(req, res, next) {
 }
 
 // Get Monday of the week for a given date
+function toDateStr(d) {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 function getWeekStart(dateStr) {
-  const d = new Date(dateStr);
+  const d = new Date(dateStr + 'T00:00:00');
   const day = d.getDay();
   const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Monday
-  const monday = new Date(d.setDate(diff));
-  return monday.toISOString().split('T')[0];
+  d.setDate(diff);
+  return toDateStr(d);
 }
 
 // Create weekly goal + auto-generate daily progress entries
@@ -49,9 +56,9 @@ router.post('/', requireAuth, (req, res) => {
 
     const createDailyEntries = db.transaction(() => {
       for (let i = 0; i < 7; i++) {
-        const date = new Date(monday);
+        const date = new Date(monday + 'T00:00:00');
         date.setDate(date.getDate() + i);
-        const dateStr = date.toISOString().split('T')[0];
+        const dateStr = toDateStr(date);
         insertProgress.run(userId, goalId, dateStr, dailyTarget);
       }
     });
