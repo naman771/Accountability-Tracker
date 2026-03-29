@@ -51,28 +51,23 @@ db.exec(`
   );
 `);
 
-// Seed default users if they don't exist
-const existingUsers = db.prepare('SELECT COUNT(*) as count FROM users').get();
-if (existingUsers.count === 0) {
-  const insertUser = db.prepare(
-    'INSERT INTO users (username, password, display_name) VALUES (?, ?, ?)'
-  );
+// Ensure default users exist (upsert-style so redeploys don't skip new users)
+const defaultUsers = [
+  { username: 'naman', password: 'naman', name: 'Naman' },
+  { username: 'dhruv', password: 'dhruv', name: 'Dhruv' },
+  { username: 'shubh', password: 'shubh', name: 'Shubh' },
+];
 
-  const defaultUsers = [
-    { username: 'naman', password: 'naman', name: 'Naman' },
-    { username: 'dhruv', password: 'dhruv', name: 'Dhruv' },
-    { username: 'shubh', password: 'shubh', name: 'Shubh' },
-  ];
-
-  const seedUsers = db.transaction(() => {
-    for (const user of defaultUsers) {
+const upsertUsers = db.transaction(() => {
+  for (const user of defaultUsers) {
+    const existing = db.prepare('SELECT id FROM users WHERE username = ?').get(user.username);
+    if (!existing) {
       const hash = bcrypt.hashSync(user.password, 10);
-      insertUser.run(user.username, hash, user.name);
+      db.prepare('INSERT INTO users (username, password, display_name) VALUES (?, ?, ?)').run(user.username, hash, user.name);
+      console.log(`✅ Created user: ${user.username}`);
     }
-  });
-
-  seedUsers();
-  console.log('✅ Seeded 3 default users');
-}
+  }
+});
+upsertUsers();
 
 export default db;
