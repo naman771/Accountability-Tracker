@@ -27,9 +27,10 @@ function getWeekStart(dateStr) {
 
 // Create weekly goal + auto-generate daily progress entries
 router.post('/', requireAuth, (req, res) => {
-  const { title, description, weeklyTarget, unit, weekStart, goalType } = req.body;
+  const { title, description, weeklyTarget, unit, weekStart, goalType, isPrivate } = req.body;
   const userId = req.session.userId;
   const type = goalType === 'daily' ? 'daily' : 'weekly';
+  const privacyFlag = isPrivate ? 1 : 0;
 
   if (!title || !weeklyTarget || !weekStart) {
     return res.status(400).json({ error: 'Title, target, and weekStart are required' });
@@ -44,8 +45,8 @@ router.post('/', requireAuth, (req, res) => {
 
   try {
     const result = db.prepare(
-      'INSERT INTO weekly_goals (user_id, week_start, title, description, weekly_target, unit, goal_type) VALUES (?, ?, ?, ?, ?, ?, ?)'
-    ).run(userId, monday, title, description || '', weeklyTarget, unit || 'tasks', type);
+      'INSERT INTO weekly_goals (user_id, week_start, title, description, weekly_target, unit, goal_type, is_private) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+    ).run(userId, monday, title, description || '', weeklyTarget, unit || 'tasks', type, privacyFlag);
 
     const goalId = result.lastInsertRowid;
 
@@ -64,7 +65,7 @@ router.post('/', requireAuth, (req, res) => {
     });
     createDailyEntries();
 
-    res.json({ id: goalId, title, weeklyTarget, dailyTarget, weekStart: monday, goalType: type });
+    res.json({ id: goalId, title, weeklyTarget, dailyTarget, weekStart: monday, goalType: type, isPrivate: privacyFlag });
   } catch (err) {
     if (err.message.includes('UNIQUE constraint')) {
       return res.status(409).json({ error: 'A goal with this title already exists for this week' });
@@ -96,6 +97,20 @@ router.get('/', requireAuth, (req, res) => {
   });
 
   res.json(goalsWithProgress);
+});
+
+// Toggle privacy on a goal
+router.put('/:id/privacy', requireAuth, (req, res) => {
+  const userId = req.session.userId;
+  const goalId = req.params.id;
+  const { isPrivate } = req.body;
+
+  const goal = db.prepare('SELECT * FROM weekly_goals WHERE id = ? AND user_id = ?').get(goalId, userId);
+  if (!goal) return res.status(404).json({ error: 'Goal not found' });
+
+  const privacyFlag = isPrivate ? 1 : 0;
+  db.prepare('UPDATE weekly_goals SET is_private = ? WHERE id = ?').run(privacyFlag, goalId);
+  res.json({ ok: true, isPrivate: privacyFlag });
 });
 
 // Delete a goal

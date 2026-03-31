@@ -12,7 +12,7 @@
 </head>
 <body>
   <div id="app">
-    <!-- Login View -->
+    <!-- Login / Register View -->
     <div id="login-view" class="view">
       <div class="login-container">
         <div class="login-glow"></div>
@@ -24,6 +24,8 @@
             </div>
             <p class="login-subtitle">Campus Placement Accountability Tracker</p>
           </div>
+
+          <!-- Login Form -->
           <form id="login-form">
             <div class="input-group">
               <label for="username">Username</label>
@@ -39,6 +41,33 @@
             </button>
             <div id="login-error" class="error-msg" style="display:none;"></div>
           </form>
+
+          <!-- Register Form (hidden by default) -->
+          <form id="register-form" style="display:none;">
+            <div class="input-group">
+              <label for="reg-display-name">Display Name</label>
+              <input type="text" id="reg-display-name" placeholder="e.g., Naman" required />
+            </div>
+            <div class="input-group">
+              <label for="reg-username">Username</label>
+              <input type="text" id="reg-username" placeholder="Choose a username" required autocomplete="username" />
+            </div>
+            <div class="input-group">
+              <label for="reg-password">Password</label>
+              <input type="password" id="reg-password" placeholder="Choose a password" required autocomplete="new-password" />
+            </div>
+            <button type="submit" id="register-btn" class="btn-primary">
+              <span>Create Account</span>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+            </button>
+            <div id="register-error" class="error-msg" style="display:none;"></div>
+          </form>
+
+          <!-- Toggle between login and register -->
+          <div class="auth-toggle">
+            <span id="auth-toggle-text">Don't have an account?</span>
+            <button type="button" id="auth-toggle-btn" class="btn-link">Create one</button>
+          </div>
         </div>
       </div>
     </div>
@@ -51,6 +80,10 @@
           <span class="topbar-title">PlacePrep</span>
         </div>
         <div class="topbar-right">
+          <button id="friends-nav-btn" class="btn-ghost friends-nav-btn">
+            <span>👥 Friends</span>
+            <span id="friend-req-badge" class="friend-req-badge" style="display:none;">0</span>
+          </button>
           <span id="user-greeting" class="greeting"></span>
           <button id="logout-btn" class="btn-ghost">Logout</button>
         </div>
@@ -71,10 +104,10 @@
           <div id="goals-list" class="goals-list"></div>
         </section>
 
-        <!-- Team Progress Section -->
+        <!-- Friends Progress Section -->
         <section class="section" id="team-section">
           <div class="section-header">
-            <h2>👥 Team Progress</h2>
+            <h2>👥 Friends' Progress</h2>
           </div>
           <div id="team-progress" class="team-progress"></div>
         </section>
@@ -135,6 +168,13 @@
               <span class="preview-label">Daily target:</span>
               <span id="daily-target-preview" class="preview-value"></span>
             </div>
+            <div class="privacy-toggle-row">
+              <label class="privacy-label">
+                <input type="checkbox" id="goal-private-check" />
+                <span class="privacy-check-icon">🔒</span>
+                <span>Private goal <span class="privacy-hint">(hidden from friends)</span></span>
+              </label>
+            </div>
             <button type="submit" class="btn-primary">Create Goal</button>
           </form>
         </div>
@@ -149,6 +189,45 @@
             <button id="close-progress-modal" class="btn-icon close-btn">✕</button>
           </div>
           <div id="progress-entries"></div>
+        </div>
+      </div>
+
+      <!-- Friends Modal -->
+      <div id="friends-modal" class="modal" style="display:none;">
+        <div class="modal-overlay"></div>
+        <div class="modal-content friends-modal-content">
+          <div class="modal-header">
+            <h3>👥 Friends</h3>
+            <button id="close-friends-modal" class="btn-icon close-btn">✕</button>
+          </div>
+
+          <!-- Tabs -->
+          <div class="friends-tabs">
+            <button class="friends-tab active" data-tab="search">Search</button>
+            <button class="friends-tab" data-tab="requests">
+              Requests
+              <span id="tab-req-badge" class="tab-badge" style="display:none;">0</span>
+            </button>
+            <button class="friends-tab" data-tab="list">My Friends</button>
+          </div>
+
+          <!-- Search Tab -->
+          <div id="friends-tab-search" class="friends-tab-content active">
+            <div class="input-group" style="margin-bottom:1rem;">
+              <input type="text" id="friend-search-input" placeholder="Search by username or name..." />
+            </div>
+            <div id="friend-search-results" class="friends-list"></div>
+          </div>
+
+          <!-- Requests Tab -->
+          <div id="friends-tab-requests" class="friends-tab-content" style="display:none;">
+            <div id="friend-requests-list" class="friends-list"></div>
+          </div>
+
+          <!-- My Friends Tab -->
+          <div id="friends-tab-list" class="friends-tab-content" style="display:none;">
+            <div id="friends-list" class="friends-list"></div>
+          </div>
         </div>
       </div>
     </div>

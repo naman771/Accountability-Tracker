@@ -31,6 +31,7 @@ db.exec(`
     weekly_target REAL NOT NULL,
     unit TEXT DEFAULT 'tasks',
     goal_type TEXT DEFAULT 'weekly',
+    is_private INTEGER DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id),
     UNIQUE(user_id, week_start, title)
@@ -50,32 +51,26 @@ db.exec(`
     FOREIGN KEY (goal_id) REFERENCES weekly_goals(id) ON DELETE CASCADE,
     UNIQUE(user_id, goal_id, date)
   );
+
+  CREATE TABLE IF NOT EXISTS friendships (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    requester_id INTEGER NOT NULL,
+    addressee_id INTEGER NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (requester_id) REFERENCES users(id),
+    FOREIGN KEY (addressee_id) REFERENCES users(id),
+    UNIQUE(requester_id, addressee_id)
+  );
 `);
 
-// Migration: add goal_type column if missing (for existing databases)
+// Migrations for existing databases
 try {
   db.exec(`ALTER TABLE weekly_goals ADD COLUMN goal_type TEXT DEFAULT 'weekly'`);
-} catch (e) {
-  // Column already exists — safe to ignore
-}
+} catch (e) { /* Column already exists */ }
 
-// Ensure default users exist (upsert-style so redeploys don't skip new users)
-const defaultUsers = [
-  { username: 'naman', password: 'naman', name: 'Naman' },
-  { username: 'dhruv', password: 'dhruv', name: 'Dhruv' },
-  { username: 'shubh', password: 'shubh', name: 'Shubh' },
-];
-
-const upsertUsers = db.transaction(() => {
-  for (const user of defaultUsers) {
-    const existing = db.prepare('SELECT id FROM users WHERE username = ?').get(user.username);
-    if (!existing) {
-      const hash = bcrypt.hashSync(user.password, 10);
-      db.prepare('INSERT INTO users (username, password, display_name) VALUES (?, ?, ?)').run(user.username, hash, user.name);
-      console.log(`✅ Created user: ${user.username}`);
-    }
-  }
-});
-upsertUsers();
+try {
+  db.exec(`ALTER TABLE weekly_goals ADD COLUMN is_private INTEGER DEFAULT 0`);
+} catch (e) { /* Column already exists */ }
 
 export default db;

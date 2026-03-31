@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url';
 import authRoutes from './routes/auth.js';
 import goalRoutes from './routes/goals.js';
 import progressRoutes from './routes/progress.js';
+import friendRoutes from './routes/friends.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -40,6 +41,7 @@ app.use(
 app.use('/api/auth', authRoutes);
 app.use('/api/goals', goalRoutes);
 app.use('/api/progress', progressRoutes);
+app.use('/api/friends', friendRoutes);
 
 // Serve frontend static files
 import fs from 'fs';

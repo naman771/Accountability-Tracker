@@ -71,20 +71,45 @@ router.get('/month', requireAuth, (req, res) => {
   res.json(Object.values(byDate));
 });
 
-// Get all team members' progress for a week (cross-user view)
+// Get friends' progress for a week (friends-only view)
 router.get('/team', requireAuth, (req, res) => {
   const { weekStart } = req.query;
+  const userId = req.session.userId;
+
   if (!weekStart) {
     return res.status(400).json({ error: 'weekStart query param required' });
   }
 
-  // Get all users
-  const users = db.prepare('SELECT id, username, display_name FROM users').all();
+  // Get accepted friend IDs
+  const friendRows = db.prepare(`
+    SELECT CASE WHEN requester_id = ? THEN addressee_id ELSE requester_id END as friend_id
+    FROM friendships
+    WHERE (requester_id = ? OR addressee_id = ?) AND status = 'accepted'
+  `).all(userId, userId, userId);
+
+  const friendIds = friendRows.map(r => r.friend_id);
+
+  // Include self + friends
+  const allIds = [userId, ...friendIds];
+
+  // Build parameterized query
+  const placeholders = allIds.map(() => '?').join(',');
+  const users = db.prepare(`SELECT id, username, display_name FROM users WHERE id IN (${placeholders})`).all(...allIds);
 
   const teamData = users.map(user => {
-    const goals = db.prepare(
-      'SELECT * FROM weekly_goals WHERE user_id = ? AND week_start = ?'
-    ).all(user.id, weekStart);
+    const isSelf = user.id === userId;
+
+    // Get goals — if viewing a friend, filter out private goals
+    let goals;
+    if (isSelf) {
+      goals = db.prepare(
+        'SELECT * FROM weekly_goals WHERE user_id = ? AND week_start = ?'
+      ).all(user.id, weekStart);
+    } else {
+      goals = db.prepare(
+        'SELECT * FROM weekly_goals WHERE user_id = ? AND week_start = ? AND is_private = 0'
+      ).all(user.id, weekStart);
+    }
 
     const goalsWithProgress = goals.map(goal => {
       const progress = db.prepare(

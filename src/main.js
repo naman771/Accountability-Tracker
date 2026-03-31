@@ -16,6 +16,7 @@ let currentUser = null;
 let currentWeekStart = getMonday(new Date());
 let calendarYear = new Date().getFullYear();
 let calendarMonth = new Date().getMonth(); // 0-indexed
+let isRegisterMode = false;
 
 // ===== Date Helpers =====
 function getMonday(d) {
@@ -72,6 +73,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 function showLogin() {
   document.getElementById('login-view').style.display = 'flex';
   document.getElementById('dashboard-view').style.display = 'none';
+  // Reset to login mode
+  setAuthMode(false);
 }
 
 function showDashboard() {
@@ -81,12 +84,46 @@ function showDashboard() {
   loadWeekGoals();
   loadTeamProgress();
   loadCalendar();
+  updateFriendRequestBadge();
+}
+
+// ===== Auth Mode Toggle =====
+function setAuthMode(register) {
+  isRegisterMode = register;
+  const loginForm = document.getElementById('login-form');
+  const registerForm = document.getElementById('register-form');
+  const toggleText = document.getElementById('auth-toggle-text');
+  const toggleBtn = document.getElementById('auth-toggle-btn');
+
+  if (register) {
+    loginForm.style.display = 'none';
+    registerForm.style.display = 'block';
+    toggleText.textContent = 'Already have an account?';
+    toggleBtn.textContent = 'Sign in';
+  } else {
+    loginForm.style.display = 'block';
+    registerForm.style.display = 'none';
+    toggleText.textContent = "Don't have an account?";
+    toggleBtn.textContent = 'Create one';
+  }
+
+  // Clear errors
+  document.getElementById('login-error').style.display = 'none';
+  document.getElementById('register-error').style.display = 'none';
 }
 
 // ===== Event Bindings =====
 function bindEvents() {
   // Login
   document.getElementById('login-form').addEventListener('submit', handleLogin);
+
+  // Register
+  document.getElementById('register-form').addEventListener('submit', handleRegister);
+
+  // Auth toggle
+  document.getElementById('auth-toggle-btn').addEventListener('click', () => {
+    setAuthMode(!isRegisterMode);
+  });
 
   // Logout
   document.getElementById('logout-btn').addEventListener('click', handleLogout);
@@ -169,6 +206,47 @@ function bindEvents() {
   document.getElementById('progress-modal').querySelector('.modal-overlay').addEventListener('click', () => {
     document.getElementById('progress-modal').style.display = 'none';
   });
+
+  // Friends nav button
+  document.getElementById('friends-nav-btn').addEventListener('click', () => {
+    openFriendsModal();
+  });
+
+  // Friends modal close
+  document.getElementById('close-friends-modal').addEventListener('click', () => {
+    document.getElementById('friends-modal').style.display = 'none';
+  });
+  document.getElementById('friends-modal').querySelector('.modal-overlay').addEventListener('click', () => {
+    document.getElementById('friends-modal').style.display = 'none';
+  });
+
+  // Friends tabs
+  document.querySelectorAll('.friends-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      const tabName = tab.dataset.tab;
+      document.querySelectorAll('.friends-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      document.querySelectorAll('.friends-tab-content').forEach(c => {
+        c.style.display = 'none';
+        c.classList.remove('active');
+      });
+      const content = document.getElementById(`friends-tab-${tabName}`);
+      content.style.display = 'block';
+      content.classList.add('active');
+
+      if (tabName === 'requests') loadFriendRequests();
+      if (tabName === 'list') loadFriendsList();
+    });
+  });
+
+  // Friend search input
+  let searchTimeout;
+  document.getElementById('friend-search-input').addEventListener('input', (e) => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+      searchUsers(e.target.value.trim());
+    }, 300);
+  });
 }
 
 // ===== Auth Handlers =====
@@ -184,6 +262,27 @@ async function handleLogin(e) {
     currentUser = await api('/auth/login', {
       method: 'POST',
       body: { username, password },
+    });
+    showDashboard();
+  } catch (err) {
+    errEl.textContent = err.message;
+    errEl.style.display = 'block';
+  }
+}
+
+async function handleRegister(e) {
+  e.preventDefault();
+  const errEl = document.getElementById('register-error');
+  errEl.style.display = 'none';
+
+  const displayName = document.getElementById('reg-display-name').value.trim();
+  const username = document.getElementById('reg-username').value.trim();
+  const password = document.getElementById('reg-password').value;
+
+  try {
+    currentUser = await api('/auth/register', {
+      method: 'POST',
+      body: { username, password, displayName },
     });
     showDashboard();
   } catch (err) {
@@ -217,7 +316,7 @@ async function loadWeekGoals() {
 
     container.innerHTML = goals.map(goal => renderGoalCard(goal)).join('');
 
-    // Bind click on day cells for updating progress
+    // Bind click on day cells for updating progress (all days, not just today)
     container.querySelectorAll('.day-cell[data-progress-id]').forEach(cell => {
       cell.addEventListener('click', () => {
         const date = cell.dataset.date;
@@ -238,6 +337,24 @@ async function loadWeekGoals() {
         }
       });
     });
+
+    // Bind privacy toggle buttons
+    container.querySelectorAll('.btn-privacy').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const goalId = btn.dataset.goalId;
+        const currentPrivate = btn.dataset.private === '1';
+        try {
+          await api(`/goals/${goalId}/privacy`, {
+            method: 'PUT',
+            body: { isPrivate: !currentPrivate },
+          });
+          loadWeekGoals();
+        } catch (err) {
+          alert(err.message);
+        }
+      });
+    });
   } catch (err) {
     container.innerHTML = `<div class="empty-state" style="color:var(--red)">Failed to load goals: ${err.message}</div>`;
   }
@@ -247,6 +364,7 @@ function renderGoalCard(goal) {
   const isDaily = goal.goal_type === 'daily';
   const dailyTarget = isDaily ? goal.weekly_target : Math.round((goal.weekly_target / 7) * 100) / 100;
   const progress = goal.dailyProgress || [];
+  const isPrivate = goal.is_private === 1;
 
   const dayCells = DAY_NAMES.map((name, i) => {
     const entry = progress[i];
@@ -262,14 +380,15 @@ function renderGoalCard(goal) {
   }).join('');
 
   return `
-    <div class="goal-card">
+    <div class="goal-card ${isPrivate ? 'goal-private' : ''}">
       <div class="goal-header">
         <div>
-          <div class="goal-title">${escapeHtml(goal.title)}</div>
+          <div class="goal-title">${isPrivate ? '🔒 ' : ''}${escapeHtml(goal.title)}</div>
           ${goal.description ? `<div class="goal-meta">${escapeHtml(goal.description)}</div>` : ''}
         </div>
         <div style="display:flex;align-items:center;gap:0.5rem;">
           <span class="goal-target-badge">${isDaily ? goal.weekly_target + ' ' + goal.unit + '/day' : goal.weekly_target + ' ' + goal.unit + '/week'}</span>
+          <button class="btn-privacy" data-goal-id="${goal.id}" data-private="${isPrivate ? 1 : 0}" title="${isPrivate ? 'Make visible to friends' : 'Hide from friends'}">${isPrivate ? '🔒' : '🔓'}</button>
           <button class="btn-delete" data-goal-id="${goal.id}">✕</button>
         </div>
       </div>
@@ -284,7 +403,10 @@ function openProgressModal(date, goals) {
   const container = document.getElementById('progress-entries');
 
   const d = new Date(date + 'T00:00:00');
-  title.textContent = `Progress — ${d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}`;
+  const today = toDateStr(new Date());
+  const isPast = date < today;
+  const dayLabel = d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+  title.textContent = `Progress — ${dayLabel}${isPast ? ' (past)' : ''}`;
 
   // Find all progress entries for this date across all goals
   const entries = [];
@@ -361,7 +483,7 @@ function openProgressModal(date, goals) {
   modal.style.display = 'flex';
 }
 
-// ===== Team Progress =====
+// ===== Team / Friends Progress =====
 async function loadTeamProgress() {
   const container = document.getElementById('team-progress');
   container.innerHTML = '<div class="empty-state"><div class="spinner"></div></div>';
@@ -369,7 +491,13 @@ async function loadTeamProgress() {
   try {
     const team = await api(`/progress/team?weekStart=${currentWeekStart}`);
     if (team.length === 0) {
-      container.innerHTML = '<div class="empty-state">No team data available.</div>';
+      container.innerHTML = '<div class="empty-state">Add friends to see their progress here! Click <strong>👥 Friends</strong> in the top bar.</div>';
+      return;
+    }
+
+    // If only self and no goals
+    if (team.length === 1 && team[0].id === currentUser.id && team[0].goalCount === 0) {
+      container.innerHTML = '<div class="empty-state">Add friends to see their progress here! Click <strong>👥 Friends</strong> in the top bar.</div>';
       return;
     }
 
@@ -389,7 +517,7 @@ async function loadTeamProgress() {
 
 function renderTeamMember(member) {
   const isCurrentUser = member.id === currentUser.id;
-  const avatarColors = ['#6c5ce7', '#00b894', '#e17055'];
+  const avatarColors = ['#6c5ce7', '#00b894', '#e17055', '#0984e3', '#e84393', '#fdcb6e'];
   const colorIdx = member.id % avatarColors.length;
   const initial = member.displayName.charAt(0).toUpperCase();
   const ringColor = getColorClass(member.avgCompletion);
@@ -436,6 +564,222 @@ function renderTeamMember(member) {
       </div>
       <div class="team-member-goals">${goalCards || '<div class="empty-state" style="padding:0.75rem;font-size:0.85rem;">No goals set this week</div>'}</div>
     </div>`;
+}
+
+// ===== Friends Management =====
+async function updateFriendRequestBadge() {
+  try {
+    const { count } = await api('/friends/requests/count');
+    const badge = document.getElementById('friend-req-badge');
+    const tabBadge = document.getElementById('tab-req-badge');
+    if (count > 0) {
+      badge.textContent = count;
+      badge.style.display = 'inline-flex';
+      tabBadge.textContent = count;
+      tabBadge.style.display = 'inline-flex';
+    } else {
+      badge.style.display = 'none';
+      tabBadge.style.display = 'none';
+    }
+  } catch {
+    // Silently fail
+  }
+}
+
+function openFriendsModal() {
+  document.getElementById('friends-modal').style.display = 'flex';
+  // Reset to search tab
+  document.querySelectorAll('.friends-tab').forEach(t => t.classList.remove('active'));
+  document.querySelector('.friends-tab[data-tab="search"]').classList.add('active');
+  document.querySelectorAll('.friends-tab-content').forEach(c => {
+    c.style.display = 'none';
+    c.classList.remove('active');
+  });
+  const searchTab = document.getElementById('friends-tab-search');
+  searchTab.style.display = 'block';
+  searchTab.classList.add('active');
+  document.getElementById('friend-search-input').value = '';
+  document.getElementById('friend-search-results').innerHTML = '<div class="empty-state" style="padding:1rem;font-size:0.85rem;">Search for users by username or name</div>';
+  updateFriendRequestBadge();
+}
+
+async function searchUsers(query) {
+  const container = document.getElementById('friend-search-results');
+  if (!query || query.length < 2) {
+    container.innerHTML = '<div class="empty-state" style="padding:1rem;font-size:0.85rem;">Type at least 2 characters to search</div>';
+    return;
+  }
+
+  container.innerHTML = '<div class="empty-state"><div class="spinner"></div></div>';
+
+  try {
+    const results = await api(`/friends/search?q=${encodeURIComponent(query)}`);
+    if (results.length === 0) {
+      container.innerHTML = '<div class="empty-state" style="padding:1rem;font-size:0.85rem;">No users found</div>';
+      return;
+    }
+
+    container.innerHTML = results.map(user => {
+      let actionHtml = '';
+      if (user.friendshipStatus === 'none') {
+        actionHtml = `<button class="btn-friend-add" data-user-id="${user.id}">Add Friend</button>`;
+      } else if (user.friendshipStatus === 'request_sent') {
+        actionHtml = `<span class="friend-status sent">Request Sent</span>`;
+      } else if (user.friendshipStatus === 'request_received') {
+        actionHtml = `
+          <button class="btn-friend-accept" data-friendship-id="${user.friendshipId}">Accept</button>
+          <button class="btn-friend-reject" data-friendship-id="${user.friendshipId}">Reject</button>`;
+      } else if (user.friendshipStatus === 'friends') {
+        actionHtml = `<span class="friend-status accepted">✓ Friends</span>`;
+      }
+
+      return `
+        <div class="friend-card">
+          <div class="friend-info">
+            <div class="friend-avatar">${user.displayName.charAt(0).toUpperCase()}</div>
+            <div>
+              <div class="friend-name">${escapeHtml(user.displayName)}</div>
+              <div class="friend-username">@${escapeHtml(user.username)}</div>
+            </div>
+          </div>
+          <div class="friend-actions">${actionHtml}</div>
+        </div>`;
+    }).join('');
+
+    // Bind add buttons
+    container.querySelectorAll('.btn-friend-add').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const userId = parseInt(btn.dataset.userId);
+        try {
+          await api('/friends/request', { method: 'POST', body: { addresseeId: userId } });
+          btn.outerHTML = '<span class="friend-status sent">Request Sent</span>';
+        } catch (err) {
+          alert(err.message);
+        }
+      });
+    });
+
+    // Bind accept/reject buttons in search results
+    container.querySelectorAll('.btn-friend-accept').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const fId = parseInt(btn.dataset.friendshipId);
+        try {
+          await api('/friends/respond', { method: 'POST', body: { friendshipId: fId, action: 'accept' } });
+          searchUsers(document.getElementById('friend-search-input').value.trim());
+          updateFriendRequestBadge();
+          loadTeamProgress();
+        } catch (err) { alert(err.message); }
+      });
+    });
+    container.querySelectorAll('.btn-friend-reject').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const fId = parseInt(btn.dataset.friendshipId);
+        try {
+          await api('/friends/respond', { method: 'POST', body: { friendshipId: fId, action: 'reject' } });
+          searchUsers(document.getElementById('friend-search-input').value.trim());
+          updateFriendRequestBadge();
+        } catch (err) { alert(err.message); }
+      });
+    });
+  } catch (err) {
+    container.innerHTML = `<div class="empty-state" style="color:var(--red)">${err.message}</div>`;
+  }
+}
+
+async function loadFriendRequests() {
+  const container = document.getElementById('friend-requests-list');
+  container.innerHTML = '<div class="empty-state"><div class="spinner"></div></div>';
+
+  try {
+    const requests = await api('/friends/requests');
+    if (requests.length === 0) {
+      container.innerHTML = '<div class="empty-state" style="padding:1rem;font-size:0.85rem;">No pending requests</div>';
+      return;
+    }
+
+    container.innerHTML = requests.map(req => `
+      <div class="friend-card">
+        <div class="friend-info">
+          <div class="friend-avatar">${req.displayName.charAt(0).toUpperCase()}</div>
+          <div>
+            <div class="friend-name">${escapeHtml(req.displayName)}</div>
+            <div class="friend-username">@${escapeHtml(req.username)}</div>
+          </div>
+        </div>
+        <div class="friend-actions">
+          <button class="btn-friend-accept" data-friendship-id="${req.friendshipId}">Accept</button>
+          <button class="btn-friend-reject" data-friendship-id="${req.friendshipId}">Reject</button>
+        </div>
+      </div>
+    `).join('');
+
+    container.querySelectorAll('.btn-friend-accept').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const fId = parseInt(btn.dataset.friendshipId);
+        try {
+          await api('/friends/respond', { method: 'POST', body: { friendshipId: fId, action: 'accept' } });
+          loadFriendRequests();
+          updateFriendRequestBadge();
+          loadTeamProgress();
+        } catch (err) { alert(err.message); }
+      });
+    });
+    container.querySelectorAll('.btn-friend-reject').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const fId = parseInt(btn.dataset.friendshipId);
+        try {
+          await api('/friends/respond', { method: 'POST', body: { friendshipId: fId, action: 'reject' } });
+          loadFriendRequests();
+          updateFriendRequestBadge();
+        } catch (err) { alert(err.message); }
+      });
+    });
+  } catch (err) {
+    container.innerHTML = `<div class="empty-state" style="color:var(--red)">${err.message}</div>`;
+  }
+}
+
+async function loadFriendsList() {
+  const container = document.getElementById('friends-list');
+  container.innerHTML = '<div class="empty-state"><div class="spinner"></div></div>';
+
+  try {
+    const friends = await api('/friends');
+    if (friends.length === 0) {
+      container.innerHTML = '<div class="empty-state" style="padding:1rem;font-size:0.85rem;">No friends yet. Search and add some!</div>';
+      return;
+    }
+
+    container.innerHTML = friends.map(f => `
+      <div class="friend-card">
+        <div class="friend-info">
+          <div class="friend-avatar">${f.displayName.charAt(0).toUpperCase()}</div>
+          <div>
+            <div class="friend-name">${escapeHtml(f.displayName)}</div>
+            <div class="friend-username">@${escapeHtml(f.username)}</div>
+          </div>
+        </div>
+        <div class="friend-actions">
+          <button class="btn-friend-remove" data-friendship-id="${f.friendshipId}">Remove</button>
+        </div>
+      </div>
+    `).join('');
+
+    container.querySelectorAll('.btn-friend-remove').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const fId = parseInt(btn.dataset.friendshipId);
+        if (confirm('Remove this friend? They will no longer see your progress.')) {
+          try {
+            await api(`/friends/${fId}`, { method: 'DELETE' });
+            loadFriendsList();
+            loadTeamProgress();
+          } catch (err) { alert(err.message); }
+        }
+      });
+    });
+  } catch (err) {
+    container.innerHTML = `<div class="empty-state" style="color:var(--red)">${err.message}</div>`;
+  }
 }
 
 // ===== Calendar =====
@@ -523,11 +867,12 @@ async function handleCreateGoal(e) {
   const weeklyTarget = parseFloat(document.getElementById('goal-target').value);
   const unit = document.getElementById('goal-unit').value.trim() || 'tasks';
   const goalType = document.getElementById('goal-type').value;
+  const isPrivate = document.getElementById('goal-private-check').checked;
 
   try {
     await api('/goals', {
       method: 'POST',
-      body: { title, description, weeklyTarget, unit, weekStart: currentWeekStart, goalType },
+      body: { title, description, weeklyTarget, unit, weekStart: currentWeekStart, goalType, isPrivate },
     });
 
     document.getElementById('goal-modal').style.display = 'none';
