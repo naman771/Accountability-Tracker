@@ -19,6 +19,8 @@ db.exec(`
     username TEXT UNIQUE NOT NULL,
     password TEXT NOT NULL,
     display_name TEXT NOT NULL,
+    security_question TEXT DEFAULT '',
+    security_answer TEXT DEFAULT '',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
@@ -71,6 +73,14 @@ try {
 
 try {
   db.exec(`ALTER TABLE weekly_goals ADD COLUMN is_private INTEGER DEFAULT 0`);
+} catch (e) { /* Column already exists */ }
+
+try {
+  db.exec(`ALTER TABLE users ADD COLUMN security_question TEXT DEFAULT ''`);
+} catch (e) { /* Column already exists */ }
+
+try {
+  db.exec(`ALTER TABLE users ADD COLUMN security_answer TEXT DEFAULT ''`);
 } catch (e) { /* Column already exists */ }
 
 export default db;

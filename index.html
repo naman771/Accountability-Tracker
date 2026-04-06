@@ -7,7 +7,7 @@
   <meta name="description" content="Track your campus placement preparation progress with weekly goals, daily objectives, and color-coded calendar insights." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/src/style.css" />
 </head>
 <body>
@@ -15,11 +15,10 @@
     <!-- Login / Register View -->
     <div id="login-view" class="view">
       <div class="login-container">
-        <div class="login-glow"></div>
         <div class="login-card">
           <div class="login-header">
             <div class="logo">
-              <span class="logo-icon">🎯</span>
+              <span class="logo-icon"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg></span>
               <h1>PlacePrep</h1>
             </div>
             <p class="login-subtitle">Campus Placement Accountability Tracker</p>
@@ -35,9 +34,12 @@
               <label for="password">Password</label>
               <input type="password" id="password" name="password" placeholder="Enter your password" required autocomplete="current-password" />
             </div>
+            <div class="forgot-password-link">
+              <button type="button" id="forgot-password-btn" class="btn-link">Forgot password?</button>
+            </div>
             <button type="submit" id="login-btn" class="btn-primary">
               <span>Sign In</span>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
             </button>
             <div id="login-error" class="error-msg" style="display:none;"></div>
           </form>
@@ -56,11 +58,59 @@
               <label for="reg-password">Password</label>
               <input type="password" id="reg-password" placeholder="Choose a password" required autocomplete="new-password" />
             </div>
+            <div class="input-group">
+              <label for="reg-security-question">Security Question</label>
+              <select id="reg-security-question" required>
+                <option value="" disabled selected>Select a security question</option>
+                <option value="pet">What was the name of your first pet?</option>
+                <option value="city">What city were you born in?</option>
+                <option value="school">What was the name of your first school?</option>
+                <option value="friend">What is the name of your childhood best friend?</option>
+                <option value="food">What is your favourite food?</option>
+                <option value="movie">What is your all-time favourite movie?</option>
+              </select>
+            </div>
+            <div class="input-group">
+              <label for="reg-security-answer">Security Answer</label>
+              <input type="text" id="reg-security-answer" placeholder="Answer in lowercase letters only" required />
+              <span class="security-hint">Use lowercase letters only. This will be used to reset your password.</span>
+            </div>
             <button type="submit" id="register-btn" class="btn-primary">
               <span>Create Account</span>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
             </button>
             <div id="register-error" class="error-msg" style="display:none;"></div>
+          </form>
+
+          <!-- Forgot Password Form (hidden by default) -->
+          <form id="forgot-form" style="display:none;">
+            <div class="input-group">
+              <label for="forgot-username">Username</label>
+              <input type="text" id="forgot-username" placeholder="Enter your username" required />
+            </div>
+            <div id="forgot-question-group" class="input-group" style="display:none;">
+              <label for="forgot-question-display">Security Question</label>
+              <input type="text" id="forgot-question-display" readonly disabled style="color:var(--text-secondary);cursor:default;" />
+            </div>
+            <div id="forgot-answer-group" class="input-group" style="display:none;">
+              <label for="forgot-answer">Your Answer</label>
+              <input type="text" id="forgot-answer" placeholder="Answer in lowercase letters only" required />
+              <span class="security-hint">Enter the same answer you used during registration (lowercase only).</span>
+            </div>
+            <div id="forgot-newpass-group" class="input-group" style="display:none;">
+              <label for="forgot-new-password">New Password</label>
+              <input type="password" id="forgot-new-password" placeholder="Choose a new password" required />
+            </div>
+            <button type="button" id="forgot-lookup-btn" class="btn-primary">
+              <span>Look Up Account</span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            </button>
+            <button type="submit" id="forgot-reset-btn" class="btn-primary" style="display:none;">
+              <span>Reset Password</span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+            </button>
+            <div id="forgot-error" class="error-msg" style="display:none;"></div>
+            <div id="forgot-success" class="success-msg" style="display:none;"></div>
           </form>
 
           <!-- Toggle between login and register -->
@@ -76,12 +126,13 @@
     <div id="dashboard-view" class="view" style="display:none;">
       <header class="topbar">
         <div class="topbar-left">
-          <span class="logo-icon-sm">🎯</span>
+          <span class="logo-icon-sm"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg></span>
           <span class="topbar-title">PlacePrep</span>
         </div>
         <div class="topbar-right">
           <button id="friends-nav-btn" class="btn-ghost friends-nav-btn">
-            <span>👥 Friends</span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <span>Friends</span>
             <span id="friend-req-badge" class="friend-req-badge" style="display:none;">0</span>
           </button>
           <span id="user-greeting" class="greeting"></span>
@@ -93,13 +144,23 @@
         <!-- Week Summary -->
         <section class="section" id="week-summary-section">
           <div class="section-header">
-            <h2>📅 This Week's Goals</h2>
-            <button id="add-goal-btn" class="btn-accent">+ New Goal</button>
+            <h2>
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+              This Week's Goals
+            </h2>
+            <button id="add-goal-btn" class="btn-accent">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+              New Goal
+            </button>
           </div>
           <div id="week-nav" class="week-nav">
-            <button id="prev-week" class="btn-icon">◀</button>
+            <button id="prev-week" class="btn-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+            </button>
             <span id="week-label" class="week-label"></span>
-            <button id="next-week" class="btn-icon">▶</button>
+            <button id="next-week" class="btn-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+            </button>
           </div>
           <div id="goals-list" class="goals-list"></div>
         </section>
@@ -107,7 +168,10 @@
         <!-- Friends Progress Section -->
         <section class="section" id="team-section">
           <div class="section-header">
-            <h2>👥 Friends' Progress</h2>
+            <h2>
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              Friends' Progress
+            </h2>
           </div>
           <div id="team-progress" class="team-progress"></div>
         </section>
@@ -115,12 +179,19 @@
         <!-- Calendar Section -->
         <section class="section" id="calendar-section">
           <div class="section-header">
-            <h2>📊 Monthly Progress</h2>
+            <h2>
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+              Monthly Progress
+            </h2>
           </div>
           <div class="calendar-nav">
-            <button id="prev-month" class="btn-icon">◀</button>
+            <button id="prev-month" class="btn-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+            </button>
             <span id="month-label" class="month-label"></span>
-            <button id="next-month" class="btn-icon">▶</button>
+            <button id="next-month" class="btn-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+            </button>
           </div>
           <div class="calendar-legend">
             <span class="legend-item"><span class="dot dot-green"></span> ≥75%</span>
@@ -138,12 +209,20 @@
         <div class="modal-content">
           <div class="modal-header">
             <h3>Create Goal</h3>
-            <button id="close-goal-modal" class="btn-icon close-btn">✕</button>
+            <button id="close-goal-modal" class="btn-icon close-btn">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            </button>
           </div>
           <form id="goal-form">
             <div class="goal-type-toggle">
-              <button type="button" class="type-btn active" data-type="weekly">📅 Weekly</button>
-              <button type="button" class="type-btn" data-type="daily">📌 Daily</button>
+              <button type="button" class="type-btn active" data-type="weekly">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+                Weekly
+              </button>
+              <button type="button" class="type-btn" data-type="daily">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                Daily
+              </button>
             </div>
             <input type="hidden" id="goal-type" value="weekly" />
             <div class="input-group">
@@ -171,7 +250,7 @@
             <div class="privacy-toggle-row">
               <label class="privacy-label">
                 <input type="checkbox" id="goal-private-check" />
-                <span class="privacy-check-icon">🔒</span>
+                <span class="privacy-check-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
                 <span>Private goal <span class="privacy-hint">(hidden from friends)</span></span>
               </label>
             </div>
@@ -186,7 +265,9 @@
         <div class="modal-content">
           <div class="modal-header">
             <h3 id="progress-modal-title">Update Progress</h3>
-            <button id="close-progress-modal" class="btn-icon close-btn">✕</button>
+            <button id="close-progress-modal" class="btn-icon close-btn">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            </button>
           </div>
           <div id="progress-entries"></div>
         </div>
@@ -197,8 +278,10 @@
         <div class="modal-overlay"></div>
         <div class="modal-content friends-modal-content">
           <div class="modal-header">
-            <h3>👥 Friends</h3>
-            <button id="close-friends-modal" class="btn-icon close-btn">✕</button>
+            <h3>Friends</h3>
+            <button id="close-friends-modal" class="btn-icon close-btn">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            </button>
           </div>
 
           <!-- Tabs -->
@@ -213,7 +296,7 @@
 
           <!-- Search Tab -->
           <div id="friends-tab-search" class="friends-tab-content active">
-            <div class="input-group" style="margin-bottom:1rem;">
+            <div class="input-group" style="margin-bottom:0.85rem;">
               <input type="text" id="friend-search-input" placeholder="Search by username or name..." />
             </div>
             <div id="friend-search-results" class="friends-list"></div>

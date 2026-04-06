@@ -11,12 +11,26 @@ async function api(path, opts = {}) {
   return data;
 }
 
+// ===== SVG Icon Helpers =====
+const ICONS = {
+  lock: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',
+  unlock: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>',
+  x: '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>',
+  edit: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>',
+  clock: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+  calendar: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>',
+  target: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>',
+  notepad: '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8Z"/><path d="M15 3v4a2 2 0 0 0 2 2h4"/></svg>',
+  flame: '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>',
+};
+
 // ===== State =====
 let currentUser = null;
 let currentWeekStart = getMonday(new Date());
 let calendarYear = new Date().getFullYear();
 let calendarMonth = new Date().getMonth(); // 0-indexed
 let isRegisterMode = false;
+let authView = 'login'; // 'login' | 'register' | 'forgot'
 
 // ===== Date Helpers =====
 function getMonday(d) {
@@ -73,43 +87,63 @@ document.addEventListener('DOMContentLoaded', async () => {
 function showLogin() {
   document.getElementById('login-view').style.display = 'flex';
   document.getElementById('dashboard-view').style.display = 'none';
-  // Reset to login mode
-  setAuthMode(false);
+  setAuthView('login');
 }
 
 function showDashboard() {
   document.getElementById('login-view').style.display = 'none';
   document.getElementById('dashboard-view').style.display = 'block';
-  document.getElementById('user-greeting').textContent = `Hey, ${currentUser.displayName} 👋`;
+  document.getElementById('user-greeting').textContent = currentUser.displayName;
   loadWeekGoals();
   loadTeamProgress();
   loadCalendar();
   updateFriendRequestBadge();
 }
 
-// ===== Auth Mode Toggle =====
-function setAuthMode(register) {
-  isRegisterMode = register;
+// ===== Auth View Management =====
+function setAuthView(view) {
+  authView = view;
   const loginForm = document.getElementById('login-form');
   const registerForm = document.getElementById('register-form');
+  const forgotForm = document.getElementById('forgot-form');
   const toggleText = document.getElementById('auth-toggle-text');
   const toggleBtn = document.getElementById('auth-toggle-btn');
 
-  if (register) {
-    loginForm.style.display = 'none';
+  loginForm.style.display = 'none';
+  registerForm.style.display = 'none';
+  forgotForm.style.display = 'none';
+
+  if (view === 'login') {
+    loginForm.style.display = 'block';
+    toggleText.textContent = "Don't have an account?";
+    toggleBtn.textContent = 'Create one';
+  } else if (view === 'register') {
     registerForm.style.display = 'block';
     toggleText.textContent = 'Already have an account?';
     toggleBtn.textContent = 'Sign in';
-  } else {
-    loginForm.style.display = 'block';
-    registerForm.style.display = 'none';
-    toggleText.textContent = "Don't have an account?";
-    toggleBtn.textContent = 'Create one';
+  } else if (view === 'forgot') {
+    forgotForm.style.display = 'block';
+    toggleText.textContent = 'Remember your password?';
+    toggleBtn.textContent = 'Sign in';
+    // Reset forgot form state
+    resetForgotForm();
   }
 
-  // Clear errors
-  document.getElementById('login-error').style.display = 'none';
-  document.getElementById('register-error').style.display = 'none';
+  // Clear all errors
+  document.querySelectorAll('.error-msg, .success-msg').forEach(el => {
+    el.style.display = 'none';
+  });
+}
+
+function resetForgotForm() {
+  document.getElementById('forgot-username').value = '';
+  document.getElementById('forgot-question-group').style.display = 'none';
+  document.getElementById('forgot-answer-group').style.display = 'none';
+  document.getElementById('forgot-newpass-group').style.display = 'none';
+  document.getElementById('forgot-lookup-btn').style.display = 'flex';
+  document.getElementById('forgot-reset-btn').style.display = 'none';
+  document.getElementById('forgot-error').style.display = 'none';
+  document.getElementById('forgot-success').style.display = 'none';
 }
 
 // ===== Event Bindings =====
@@ -122,7 +156,30 @@ function bindEvents() {
 
   // Auth toggle
   document.getElementById('auth-toggle-btn').addEventListener('click', () => {
-    setAuthMode(!isRegisterMode);
+    if (authView === 'login') {
+      setAuthView('register');
+    } else {
+      setAuthView('login');
+    }
+  });
+
+  // Forgot password
+  document.getElementById('forgot-password-btn').addEventListener('click', () => {
+    setAuthView('forgot');
+  });
+
+  // Forgot password — lookup
+  document.getElementById('forgot-lookup-btn').addEventListener('click', handleForgotLookup);
+
+  // Forgot password — reset
+  document.getElementById('forgot-form').addEventListener('submit', handleForgotReset);
+
+  // Force lowercase on security answer inputs
+  document.getElementById('reg-security-answer').addEventListener('input', (e) => {
+    e.target.value = e.target.value.toLowerCase();
+  });
+  document.getElementById('forgot-answer').addEventListener('input', (e) => {
+    e.target.value = e.target.value.toLowerCase();
   });
 
   // Logout
@@ -278,13 +335,104 @@ async function handleRegister(e) {
   const displayName = document.getElementById('reg-display-name').value.trim();
   const username = document.getElementById('reg-username').value.trim();
   const password = document.getElementById('reg-password').value;
+  const securityQuestion = document.getElementById('reg-security-question').value;
+  const securityAnswer = document.getElementById('reg-security-answer').value.trim();
+
+  if (!securityQuestion) {
+    errEl.textContent = 'Please select a security question';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  if (!securityAnswer) {
+    errEl.textContent = 'Please provide a security answer';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  if (securityAnswer !== securityAnswer.toLowerCase()) {
+    errEl.textContent = 'Security answer must be in lowercase letters only';
+    errEl.style.display = 'block';
+    return;
+  }
 
   try {
     currentUser = await api('/auth/register', {
       method: 'POST',
-      body: { username, password, displayName },
+      body: { username, password, displayName, securityQuestion, securityAnswer },
     });
     showDashboard();
+  } catch (err) {
+    errEl.textContent = err.message;
+    errEl.style.display = 'block';
+  }
+}
+
+async function handleForgotLookup() {
+  const errEl = document.getElementById('forgot-error');
+  const successEl = document.getElementById('forgot-success');
+  errEl.style.display = 'none';
+  successEl.style.display = 'none';
+
+  const username = document.getElementById('forgot-username').value.trim();
+  if (!username) {
+    errEl.textContent = 'Please enter your username';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  try {
+    const data = await api(`/auth/security-question?username=${encodeURIComponent(username)}`);
+    // Show the question and answer fields
+    document.getElementById('forgot-question-display').value = data.question;
+    document.getElementById('forgot-question-group').style.display = 'block';
+    document.getElementById('forgot-answer-group').style.display = 'block';
+    document.getElementById('forgot-newpass-group').style.display = 'block';
+    document.getElementById('forgot-lookup-btn').style.display = 'none';
+    document.getElementById('forgot-reset-btn').style.display = 'flex';
+    // Disable username editing
+    document.getElementById('forgot-username').readOnly = true;
+    document.getElementById('forgot-username').style.opacity = '0.6';
+  } catch (err) {
+    errEl.textContent = err.message;
+    errEl.style.display = 'block';
+  }
+}
+
+async function handleForgotReset(e) {
+  e.preventDefault();
+  const errEl = document.getElementById('forgot-error');
+  const successEl = document.getElementById('forgot-success');
+  errEl.style.display = 'none';
+  successEl.style.display = 'none';
+
+  const username = document.getElementById('forgot-username').value.trim();
+  const securityAnswer = document.getElementById('forgot-answer').value.trim();
+  const newPassword = document.getElementById('forgot-new-password').value;
+
+  if (!securityAnswer) {
+    errEl.textContent = 'Please enter your security answer';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  if (!newPassword || newPassword.length < 3) {
+    errEl.textContent = 'New password must be at least 3 characters';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  try {
+    const data = await api('/auth/reset-password', {
+      method: 'POST',
+      body: { username, securityAnswer, newPassword },
+    });
+    successEl.textContent = data.message || 'Password reset successfully. You can now sign in.';
+    successEl.style.display = 'block';
+    // After 2 seconds, switch back to login
+    setTimeout(() => {
+      setAuthView('login');
+    }, 2500);
   } catch (err) {
     errEl.textContent = err.message;
     errEl.style.display = 'block';
@@ -308,7 +456,7 @@ async function loadWeekGoals() {
     if (goals.length === 0) {
       container.innerHTML = `
         <div class="empty-state">
-          <span class="empty-icon">📝</span>
+          <span class="empty-icon">${ICONS.notepad}</span>
           No goals for this week yet. Click <strong>+ New Goal</strong> to get started!
         </div>`;
       return;
@@ -379,17 +527,22 @@ function renderGoalCard(goal) {
       </div>`;
   }).join('');
 
+  const typeLabel = isDaily ? 'DAILY' : 'WEEKLY';
+  const typeClass = isDaily ? 'daily' : 'weekly';
+  const targetText = isDaily ? `${goal.weekly_target} ${goal.unit}/day` : `${goal.weekly_target} ${goal.unit}/wk`;
+
   return `
     <div class="goal-card ${isPrivate ? 'goal-private' : ''}">
       <div class="goal-header">
         <div>
-          <div class="goal-title">${isPrivate ? '🔒 ' : ''}${escapeHtml(goal.title)}</div>
+          <div class="goal-title">${isPrivate ? ICONS.lock + ' ' : ''}${escapeHtml(goal.title)}</div>
           ${goal.description ? `<div class="goal-meta">${escapeHtml(goal.description)}</div>` : ''}
         </div>
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <span class="goal-target-badge">${isDaily ? goal.weekly_target + ' ' + goal.unit + '/day' : goal.weekly_target + ' ' + goal.unit + '/week'}</span>
-          <button class="btn-privacy" data-goal-id="${goal.id}" data-private="${isPrivate ? 1 : 0}" title="${isPrivate ? 'Make visible to friends' : 'Hide from friends'}">${isPrivate ? '🔒' : '🔓'}</button>
-          <button class="btn-delete" data-goal-id="${goal.id}">✕</button>
+        <div class="goal-actions">
+          <span class="goal-type-indicator ${typeClass}">${typeLabel}</span>
+          <span class="goal-target-badge">${targetText}</span>
+          <button class="btn-privacy" data-goal-id="${goal.id}" data-private="${isPrivate ? 1 : 0}" title="${isPrivate ? 'Make visible to friends' : 'Hide from friends'}">${isPrivate ? ICONS.lock : ICONS.unlock}</button>
+          <button class="btn-delete" data-goal-id="${goal.id}">${ICONS.x} Remove</button>
         </div>
       </div>
       <div class="daily-breakdown">${dayCells}</div>
@@ -490,18 +643,16 @@ async function loadTeamProgress() {
 
   try {
     const team = await api(`/progress/team?weekStart=${currentWeekStart}`);
-    if (team.length === 0) {
-      container.innerHTML = '<div class="empty-state">Add friends to see their progress here! Click <strong>👥 Friends</strong> in the top bar.</div>';
+
+    // Filter out the current user — their progress is already shown in "This Week's Goals"
+    const friendsOnly = team.filter(member => member.id !== currentUser.id);
+
+    if (friendsOnly.length === 0) {
+      container.innerHTML = '<div class="empty-state">Add friends to see their progress here! Click <strong>Friends</strong> in the top bar.</div>';
       return;
     }
 
-    // If only self and no goals
-    if (team.length === 1 && team[0].id === currentUser.id && team[0].goalCount === 0) {
-      container.innerHTML = '<div class="empty-state">Add friends to see their progress here! Click <strong>👥 Friends</strong> in the top bar.</div>';
-      return;
-    }
-
-    container.innerHTML = team.map(member => renderTeamMember(member)).join('');
+    container.innerHTML = friendsOnly.map(member => renderTeamMember(member)).join('');
 
     // Bind expand toggles
     container.querySelectorAll('.team-member-header').forEach(header => {
@@ -516,15 +667,11 @@ async function loadTeamProgress() {
 }
 
 function renderTeamMember(member) {
-  const isCurrentUser = member.id === currentUser.id;
-  const avatarColors = ['#6c5ce7', '#00b894', '#e17055', '#0984e3', '#e84393', '#fdcb6e'];
-  const colorIdx = member.id % avatarColors.length;
   const initial = member.displayName.charAt(0).toUpperCase();
   const ringColor = getColorClass(member.avgCompletion);
 
   const goalCards = member.goals.map(goal => {
     const isDaily = goal.goal_type === 'daily';
-    const dailyTarget = isDaily ? goal.weekly_target : Math.round((goal.weekly_target / 7) * 100) / 100;
     const progress = goal.dailyProgress || [];
     const dayCells = DAY_NAMES.map((name, i) => {
       const entry = progress[i];
@@ -549,12 +696,12 @@ function renderTeamMember(member) {
   }).join('');
 
   return `
-    <div class="team-member-card ${isCurrentUser ? 'is-you' : ''}">
+    <div class="team-member-card">
       <div class="team-member-header">
         <div class="team-member-info">
-          <div class="team-avatar" style="background:${avatarColors[colorIdx]}">${initial}</div>
+          <div class="team-avatar">${initial}</div>
           <div>
-            <span class="team-member-name">${escapeHtml(member.displayName)}${isCurrentUser ? ' <span class="you-badge">You</span>' : ''}</span>
+            <span class="team-member-name">${escapeHtml(member.displayName)}</span>
             <span class="team-member-stats">${member.goalCount} goal${member.goalCount !== 1 ? 's' : ''} this week</span>
           </div>
         </div>
@@ -562,7 +709,7 @@ function renderTeamMember(member) {
           <span class="team-completion-value">${member.avgCompletion}%</span>
         </div>
       </div>
-      <div class="team-member-goals">${goalCards || '<div class="empty-state" style="padding:0.75rem;font-size:0.85rem;">No goals set this week</div>'}</div>
+      <div class="team-member-goals">${goalCards || '<div class="empty-state" style="padding:0.6rem;font-size:0.8rem;">No goals set this week</div>'}</div>
     </div>`;
 }
 
@@ -599,14 +746,14 @@ function openFriendsModal() {
   searchTab.style.display = 'block';
   searchTab.classList.add('active');
   document.getElementById('friend-search-input').value = '';
-  document.getElementById('friend-search-results').innerHTML = '<div class="empty-state" style="padding:1rem;font-size:0.85rem;">Search for users by username or name</div>';
+  document.getElementById('friend-search-results').innerHTML = '<div class="empty-state" style="padding:0.85rem;font-size:0.8rem;">Search for users by username or name</div>';
   updateFriendRequestBadge();
 }
 
 async function searchUsers(query) {
   const container = document.getElementById('friend-search-results');
   if (!query || query.length < 2) {
-    container.innerHTML = '<div class="empty-state" style="padding:1rem;font-size:0.85rem;">Type at least 2 characters to search</div>';
+    container.innerHTML = '<div class="empty-state" style="padding:0.85rem;font-size:0.8rem;">Type at least 2 characters to search</div>';
     return;
   }
 
@@ -615,7 +762,7 @@ async function searchUsers(query) {
   try {
     const results = await api(`/friends/search?q=${encodeURIComponent(query)}`);
     if (results.length === 0) {
-      container.innerHTML = '<div class="empty-state" style="padding:1rem;font-size:0.85rem;">No users found</div>';
+      container.innerHTML = '<div class="empty-state" style="padding:0.85rem;font-size:0.8rem;">No users found</div>';
       return;
     }
 
@@ -630,7 +777,7 @@ async function searchUsers(query) {
           <button class="btn-friend-accept" data-friendship-id="${user.friendshipId}">Accept</button>
           <button class="btn-friend-reject" data-friendship-id="${user.friendshipId}">Reject</button>`;
       } else if (user.friendshipStatus === 'friends') {
-        actionHtml = `<span class="friend-status accepted">✓ Friends</span>`;
+        actionHtml = `<span class="friend-status accepted">Friends</span>`;
       }
 
       return `
@@ -693,7 +840,7 @@ async function loadFriendRequests() {
   try {
     const requests = await api('/friends/requests');
     if (requests.length === 0) {
-      container.innerHTML = '<div class="empty-state" style="padding:1rem;font-size:0.85rem;">No pending requests</div>';
+      container.innerHTML = '<div class="empty-state" style="padding:0.85rem;font-size:0.8rem;">No pending requests</div>';
       return;
     }
 
@@ -746,7 +893,7 @@ async function loadFriendsList() {
   try {
     const friends = await api('/friends');
     if (friends.length === 0) {
-      container.innerHTML = '<div class="empty-state" style="padding:1rem;font-size:0.85rem;">No friends yet. Search and add some!</div>';
+      container.innerHTML = '<div class="empty-state" style="padding:0.85rem;font-size:0.8rem;">No friends yet. Search and add some!</div>';
       return;
     }
 
@@ -818,6 +965,26 @@ async function loadCalendar() {
     // Ignore errors - just show empty calendar
   }
 
+  // Compute streaks (consecutive days >= 75%)
+  const streakDays = new Set();
+  const sortedDates = Object.keys(progressByDate).sort();
+  let currentStreak = 0;
+  for (const dateStr of sortedDates) {
+    if (progressByDate[dateStr] >= 75) {
+      currentStreak++;
+      if (currentStreak >= 2) {
+        // Mark this and previous day as streak
+        streakDays.add(dateStr);
+        const prevDate = addDays(dateStr, -1);
+        if (progressByDate[prevDate] >= 75) {
+          streakDays.add(prevDate);
+        }
+      }
+    } else {
+      currentStreak = 0;
+    }
+  }
+
   // Empty cells for offset
   for (let i = 0; i < startDay; i++) {
     const el = document.createElement('div');
@@ -825,7 +992,7 @@ async function loadCalendar() {
     grid.appendChild(el);
   }
 
-  // Day cells
+  // Day cells with staggered animation
   for (let d = 1; d <= daysInMonth; d++) {
     const dateStr = `${calendarYear}-${String(calendarMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
     const el = document.createElement('div');
@@ -838,10 +1005,33 @@ async function loadCalendar() {
       pctText = `${pct}%`;
     }
 
-    el.className = `cal-day ${colorClass}${dateStr === today ? ' today' : ''}`;
+    const isStreak = streakDays.has(dateStr);
+    el.className = `cal-day ${colorClass}${dateStr === today ? ' today' : ''}${isStreak ? ' streak' : ''}`;
+
+    // Staggered animation delay
+    const delay = (startDay + d - 1) * 15;
+    el.style.animationDelay = `${delay}ms`;
+
+    // Build inner content with progress bar
+    let barHtml = '';
+    if (pct !== undefined && pct !== null) {
+      barHtml = `<div class="cal-bar" style="width:${Math.min(pct, 100)}%"></div>`;
+    }
+
+    // Tooltip
+    let tooltipText = '';
+    if (pct !== undefined && pct !== null) {
+      tooltipText = `${pct}% avg completion`;
+      if (isStreak) tooltipText += ' (streak)';
+    } else {
+      tooltipText = 'No data';
+    }
+
     el.innerHTML = `
       <span class="cal-date">${d}</span>
-      ${pctText ? `<span class="cal-pct">${pctText}</span>` : ''}`;
+      ${pctText ? `<span class="cal-pct">${pctText}</span>` : ''}
+      ${barHtml}
+      <div class="cal-tooltip">${tooltipText}</div>`;
 
     el.addEventListener('click', () => {
       // Navigate to the week containing this date and open progress for it
